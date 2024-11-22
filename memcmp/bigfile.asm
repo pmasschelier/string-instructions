@@ -4,7 +4,7 @@ global bigfile_size
 
 BYTESIZE equ (1 << 22)
 
-section .data
+section .rodata
 align 64
 src:
 	times (BYTESIZE - 2) db 'A'
@@ -13,7 +13,8 @@ src:
 bigfile_size:
 	dd $ - src
 
-section .bss
 align 64
 dst:
-	resb BYTESIZE
+	times (BYTESIZE - 2) db 'A'
+	db 0x1
+	db 0xB

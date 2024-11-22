@@ -1,5 +1,5 @@
 project('memcpy', 'c', 'nasm',
-  default_options: ['buildtype=release']
+  default_options: ['buildtype=debugoptimized']
 )
 
 bigfile_lib = static_library('bigfile', 'bigfile.asm')

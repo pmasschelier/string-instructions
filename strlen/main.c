@@ -11,14 +11,16 @@ unsigned int __attribute__((optimize("O1"))) len(const char *src) {
 }
 #else
 unsigned int len(const char *src);
-#endif /* ifdef ASM_VERSION */
+#endif
 
 extern char bigfile_start[];
 extern unsigned int bigfile_size;
 
 int main(void) {
   int n = len(bigfile_start);
+
+  // Check that len returns byte size - 1
   if (n != bigfile_size - 1)
-    return -1;
+    return 1;
   return 0;
 }
