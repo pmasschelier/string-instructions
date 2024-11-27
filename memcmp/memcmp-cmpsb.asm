@@ -10,5 +10,5 @@ compare:
 					;	cmp *(rsi++), *(rdi++)
 	setb al			; if(ZF == false and CF == true) al = 1
 	seta dl			; if(ZF == false and CF == false) bl = 1
-	sub eax, edx	; return al - bl
+	sub eax, edx	; return al - dl
 	ret
