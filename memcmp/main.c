@@ -2,17 +2,13 @@
 #include <string.h>
 #define compare memcmp
 #elif defined(DUMMY_VERSION)
-int __attribute__((optimize("O1"))) compare(void *dest, void *src,
+int __attribute__((optimize("O3"))) compare(void *dest, void *src,
                                             unsigned long n) {
   int diff;
   for (int i = 0; i < n; i++) {
     diff = *((char *)dest++) - *((char *)src++);
-    if (diff == 0)
-      continue;
-    if (diff < 0)
-      return -1;
-    else
-      return 1;
+    if (diff != 0)
+      return diff;
   }
   return 0;
 }

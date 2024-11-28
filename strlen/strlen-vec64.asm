@@ -36,7 +36,7 @@ len:
 	and rcx, [.mask] 	; test all sign bits
 	jz .L1				; no zero-byte, continue loop
 .L3:
-	bsf rcx, rcx	; find right-most 1-bit
+	bsf rcx, rcx	; find right-most set sign bit
 	shr rcx, 3		; divide by 8 = byte index
 	sub rax, rdi	; subtract start address
 	add rax, rcx	; add index to byte
