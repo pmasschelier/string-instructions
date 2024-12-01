@@ -7,7 +7,7 @@ set:
 	mov rax, rdi					; rax = s
 	movzx ecx, sil					; Copy sil in eax with zero-extend
 	vmovd xmm0, ecx					; Copy the low dword (eax) into xmm0
-	vmovdqa xmm1, [.shuffle_mask]	; Load a shuffle mask filled with zero indexes
+	vpxor xmm1, xmm1, xmm1			; Load a shuffle mask filled with zero indexes
 	vpshufb xmm0, xmm0, xmm1		; Broadcast the first byte of xmm0 to all xmm0
 .loop:
 	vmovdqa [rdi], xmm0				; Copy the 16 bytes of xmm0 to s
@@ -16,5 +16,3 @@ set:
 	test rdx, rdx					; if(rdx != 0)
 	jnz .loop						;	 jump
 	ret
-align 16
-.shuffle_mask: times 16 db 0x0
