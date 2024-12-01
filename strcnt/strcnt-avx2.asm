@@ -46,11 +46,11 @@ count:
 	xor r10d, r10d
 	xor r11d, r11d
 
-	test ecx, 0x80
-	cmovnz r10, r8
-	cmovnz r11, r9
-	cmovnz r8, rdx
-	cmovnz r9, rdx
+	test ecx, 0x80					; if(ecx & 0b1000'0000) ie ecx > 128
+	cmovnz r10, r8					;	 r10 = r8
+	cmovnz r11, r9					; 	 r11 = r9
+	cmovnz r8, rdx					; 	 r8 = 0b1...1
+	cmovnz r9, rdx					; 	 r9 = 0b1...1
 	vmovq xmm3, r8					; ymm3 = r8
 	vmovq xmm4, r9					; ymm4 = r9
 	vmovq xmm5, r10					; ymm5 = r10

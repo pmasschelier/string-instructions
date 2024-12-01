@@ -54,32 +54,3 @@ count:
 .exit:
 	ret
 
-; 	vpxor xmm0, xmm0, xmm0
-; 	mov      rcx, rdi         ; copy pointer
-; 	and      rcx,  15         ; lower 4 bits indicate misalignment
-; 	jz .L1
-; 	and      rdi,  -16        ; align pointer by 16
-; 	vmovdqa   xmm1, [rdi]      ; read from nearest preceding boundary
-; 	vpcmpeqb  xmm1, xmm0       ; compare 16 bytes with zero
-; 	vpmovmskb edx,  xmm1       ; get one bit for each byte result
-; 	shr      edx,  cl         ; shift out false bits
-; 	shl      edx,  cl         ; shift back again
-; 	bsf      ecx,  edx        ; find first 1-bit
-;
-;
-; 	jnz      .L2               ; found
-; 	; Main loop, search 16 bytes at a time
-; .L1:
-; 	add      eax,  16              ; increment pointer by 16
-; 	vmovdqa   xmm1, [eax]           ; read 16 bytes aligned
-; 	vpcmpeqb  xmm1, xmm0            ; compare 16 bytes with zero
-; 	vpmovmskb edx,  xmm1            ; get one bit for each byte result
-; 	bsf      edx,  edx             ; find first 1-bit
-; 	jz       .L1                    ; loop if not found
-; .L2:     ; Zero-byte found. Compute string length
-; 	sub      rax,  rdi         ; subtract start address
-; 	add      rax,  rdx             ; add byte index
-; 	ret
-;
-; align  16
-; .shuffle_mask: times 16 db 0x0
