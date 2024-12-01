@@ -1,5 +1,6 @@
 global count
 
+; Define load_byte which uses movzx if MOV_VERSION is defined and lodsb otherwise
 %ifdef MOV_VERSION
 %macro load_byte 0 
 	movzx eax, byte [rsi]
@@ -14,20 +15,20 @@ global count
 section .text
 ; unsigned int count(rdi: const char *s, rsi: char c)
 count:
-	xor eax, eax
-	xor edx, edx
-	xor ecx, ecx
-	xchg rdi, rsi
-	and rdi, 0xff
+	xor edx, edx	; rdx = 0
+	xor ecx, ecx	; rcx = 0
+	xchg rdi, rsi	; exchange rsi and rdi
+	load_byte		; ax = *(rsi++)
+	test al, al		; if(al == 0)
+	jz .exit		; 	return 0
 .loop:
-	load_byte
-	test eax, eax
-	jz .exit
-	cmp eax, edi
-	sete cl
-	add edx, ecx
-	jmp .loop
+	cmp al, dil		; if(eax == c)
+	sete cl			;	 cl = 1
+	add edx, ecx	; edx += cl
+	load_byte		; ax = *(rsi++)
+	test al, al		; if(eax != 0)
+	jnz .loop		; 	loop
 .exit:
-	mov eax, edx
+	mov eax, edx	; return edx
 	ret
 
