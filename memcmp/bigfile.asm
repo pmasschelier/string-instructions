@@ -1,8 +1,9 @@
-global src
-global dst
-global bigfile_size
+global src:data BYTESIZE
+global dst:data BYTESIZE
+global bigfile_size:data 4
+global func
 
-BYTESIZE equ (1 << 22)
+BYTESIZE equ (1 << 23)
 
 section .rodata
 align 64
@@ -18,3 +19,6 @@ dst:
 	times (BYTESIZE - 2) db 'A'
 	db 0x1
 	db 0xB
+
+func:
+	ret
