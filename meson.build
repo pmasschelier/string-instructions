@@ -7,3 +7,6 @@ cc = meson.get_compiler('c')
 libm = cc.find_library('m', required : true)
 
 subdir('memcpy')
+subdir('memcmp')
+subdir('strlen')
+subdir('memset')
