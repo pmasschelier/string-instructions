@@ -1,0 +1,8 @@
+[wrap-git]
+url = https://github.com/okuvshynov/b63.git
+revision = HEAD
+depth = 1
+patch_directory = b63
+
+[provide]
+b63 = b63_dep
