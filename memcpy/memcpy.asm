@@ -75,4 +75,5 @@ memcpy_avx2:
 	; Copy the remaining bytes
 	vmovdqu ymm0, [rsi + rdx - 0x20]
 	vmovdqu [rdi + rdx - 0x20], ymm0
+	vzeroupper
 	ret

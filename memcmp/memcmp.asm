@@ -127,6 +127,7 @@ memcmp_avx2:
 	setz dl							; else
 	sub eax, edx					;	 return -1
 .exit:
+	vzeroupper
 	ret
 
 PACKED_UBYTE 			equ	0b00

@@ -5,14 +5,10 @@
 
 #define STRLEN 35
 
-const char src1[STRLEN] __attribute__((aligned(32))) =
-    "This is a not very long test string";
-const char src2[STRLEN] __attribute__((aligned(32))) =
-    "This is a not very long test string";
-const char src3[STRLEN] __attribute__((aligned(32))) =
-    "This is a not very lona test string";
-const char src4[STRLEN] __attribute__((aligned(32))) =
-    "This is a not very wong test string";
+const char src1[STRLEN] = "This is a not very long test string";
+const char src2[STRLEN] = "This is a not very long test string";
+const char src3[STRLEN] = "This is a not very lona test string";
+const char src4[STRLEN] = "This is a not very wong test string";
 
 int main(int argc, char *argv[]) {
   int ret;
