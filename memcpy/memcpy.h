@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 
+void memcpy_dummy(void *restrict dst, const void *restrict src, size_t n);
 void memcpy_movsb(void *restrict dst, const void *restrict src, size_t n);
 void memcpy_movsq(void *restrict dst, const void *restrict src, size_t n);
 void memcpy_movsb_std(void *restrict dst, const void *restrict src, size_t n);

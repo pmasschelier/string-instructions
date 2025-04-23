@@ -5,15 +5,19 @@
 
 #define STRLEN 35
 
-const char src[STRLEN] __attribute__((aligned (32))) = "This is a not very long test string";
-char dst[STRLEN] __attribute__((aligned (32)));
+const char src[STRLEN] = "This is a not very long test string";
+char dst[STRLEN];
 
 int main(int argc, char *argv[]) {
-  plan(6);
+  plan(7);
 
   memset(dst, 0, STRLEN);
   memcpy(dst, src, STRLEN);
   is(dst, src, "Standard memcpy function");
+
+  memset(dst, 0, STRLEN);
+  memcpy_dummy(dst, src, STRLEN);
+  is(dst, src, "memcpy_dummy function");
 
   memset(dst, 0, STRLEN);
   memcpy_movsb(dst, src, STRLEN);

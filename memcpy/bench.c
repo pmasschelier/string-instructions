@@ -12,6 +12,11 @@ B63_BASELINE(standard, n) {
     memcpy(dst, src, bigfile_size);
 }
 
+B63_BENCHMARK(dummy, n) {
+  for (int i = 0; i < n; i++)
+    memcpy_dummy(dst, src, bigfile_size);
+}
+
 B63_BENCHMARK(movsb, n) {
   for (int i = 0; i < n; i++)
     memcpy_movsb(dst, src, bigfile_size);
