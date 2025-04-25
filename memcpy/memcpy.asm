@@ -29,39 +29,37 @@ memcpy_movsb_std:
 	cld             ; Clear direction flag
 	ret             ; return rax
 
+; void *memcpy_movsq(rdi: const void dst[.n], rsi: void src[.n], rdx: size_t n)
 memcpy_movsq:
-    mov rax, rdi    ; rax = dst
-    cmp rdx, 8      ; if(n < 8)
-    jb .end         ;    goto .end
-    mov rcx, rdi    ; Save rdi in rcx
-    movsq           ; Copy first quadword
-    and rdi, -8     ; Align rdi
-    and rsi, -8     ; Align rsi
-    sub rcx, rdi    ; Compute signed distance from first quadword boundary to dst
-    add rdx, rcx    ; Substract distance from n
-
-    mov rcx, rdx    ; rcx = n
-    and rdx, 7      ; rdx = n % 8
-	shr rcx, 3      ; rcx = n / 8
-	rep movsq       ; for(; rcx != 0; rcx--)
-                    ;    *(rdi++) = *(rsi++)
+    mov rax, rdi                ; rax = dst
+    cmp rdx, 8                  ; if(n < 8)
+    jb .end                     ;    goto .end
+    lea rcx, [rsi + 8]          ; rcx = src + 8
+    movsq                       ; Copy first quadword
+    and rsi, -8                 ; rsi = align(src + 8, 8)
+    sub rcx, rsi                ; rcx = (src + 8) - align(src + 8, 8)
+    sub rdi, rcx                ; rdi = (dst + 8) - ((src + 8) - align(src + 8, 8))
+    lea rdx, [rdx + rcx - 8]    ; rdx = n - (8 - ((src + 8) - align(src + 8, 8)))
+    mov rcx, rdx                ; rcx = n - (align(src + 8, 8) - src)
+    and rcx, -8                 ; rcx = align(n - (align(src + 8, 8) - src), 8)
+    shr rcx, 3                  ; rcx = align(n - (align(src + 8, 8) - src), 8) / 8
+	rep movsq                   ; for(; rcx != 0; rcx--)
+                                ;    *(rdi++) = *(rsi++)
+    and rdx, (8 - 1)            ; rdx = n - (align(src + 8, 8) - src) % 8
 .end:
-    mov r8, rax     ; r8 = dst
-    sub r8, rdi     ; r8 = dst - rdi
-    add r8, rdx     ; r8 = dst - rdi + n
-    cmp r8, 4       ; if(r8 < 4)
-    jb .word        ;    goto .word
-    movsd           ; copy a double word
-    sub r8, 4       ; r8 -= 4
+    cmp rdx, 4                  ; if(rdx < 4)
+    jb .word                    ;    goto .word
+    movsd                       ; copy a double word
+    sub rdx, 4                  ; rdx -= 4
 .word
-    cmp r8, 2       ; if(r8 < 2)
-    jb .byte        ;    goto .byte
-    movsw           ; copy a word
-    sub r8, 2       ; r8 -= 2
+    cmp rdx, 2                  ; if(rdx < 2)
+    jb .byte                    ;    goto .byte
+    movsw                       ; copy a word
+    sub rdx, 2                  ; rdx -= 2
 .byte:
-    test r8, r8     ; if(r8 == 0)
-    jz .exit        ;    goto .exit
-    movsb           ; copy a byte
+    test rdx, rdx               ; if(rdx == 0)
+    jz .exit                    ;    goto .exit
+    movsb                       ; copy a byte
 .exit:
     ret
 
@@ -111,9 +109,9 @@ memcpy_movq:
     mov r8, [rsi]               ; r8 = *(rsi)
     mov [rdi], r8               ; *(rsi) = r8
     lea rcx, [rdi + 7]          ; rcx = dst + 7
-    and rcx, -8                 ; rcx = (dst + 7) % 8
-    sub rcx, rdi                ; rcx = ((dst + 7) % 8) - dst
-    sub r9, rcx                 ; r9 = dst + n - ((dst + 7) % 8)
+    and rcx, -8                 ; rcx = align((dst + 7), 8)
+    sub rcx, rdi                ; rcx = align((dst + 7), 8) - dst
+    sub r9, rcx                 ; r9 = dst + n - align((dst + 7), 8)
 .loop:
     mov rax, [rsi + rcx]        ; r8 = src[rcx]
     mov [rdi + rcx], rax        ; dst[rcx] = r8
@@ -143,16 +141,15 @@ memcpy_avx:
     mov r9, rdx                     ; r9 = n
     cmp r9, 16                      ; if(n < 16)
     jb .end                         ;    goto .end
-    mov rcx, rdi                    ; Save rdi in rcx
     vmovdqu xmm0, [rsi]             ; Copy the first
     vmovdqu [rdi], xmm0             ; 32 bytes
-    lea rcx, [rdi + 15]             ; rcx = dst + 7
-    and rcx, -16                    ; rcx = (dst + 7) % 8
-    sub rcx, rdi                    ; rcx = ((dst + 7) % 8) - dst
-    sub r9, rcx                     ; r9 = dst + n - ((dst + 7) % 8)
+    lea rcx, [rsi + 15]             ; rcx = src + 15
+    and rcx, -16                    ; rcx = align((src + 15), 16)
+    sub rcx, rsi                    ; rcx = align((src + 15), 16) - src
+    sub r9, rcx                     ; r9 = src + n - align((src + 15), 16)
 .loop:
 	vmovdqa xmm0, [rsi + rcx]       ; xmm0 = rsi[rcx]
-	vmovdqa [rdi + rcx], xmm0       ; rdi[rcx] = xmm0
+	vmovdqu [rdi + rcx], xmm0       ; rdi[rcx] = xmm0
     add rcx, 16                     ; rcx += 16
     sub r9, 16                      ; r9 -= 16
     cmp r9, 16                      ; if(r9 >= 16)
@@ -179,16 +176,15 @@ memcpy_avx2:
     mov r9, rdx                     ; r9 = n
     cmp r9, 32                      ; if(n < 16)
     jb .end                         ;    goto .end
-    mov rcx, rdi                    ; Save rdi in rcx
     vmovdqu ymm0, [rsi]             ; Copy the first
     vmovdqu [rdi], ymm0             ; 32 bytes
-    lea rcx, [rdi + 31]             ; rcx = dst + 7
-    and rcx, -32                    ; rcx = (dst + 7) % 8
-    sub rcx, rdi                    ; rcx = ((dst + 7) % 8) - dst
-    sub r9, rcx                     ; r9 = dst + n - ((dst + 7) % 8)
+    lea rcx, [rsi + 31]             ; rcx = src + 31
+    and rcx, -32                    ; rcx = align((src + 31), 32)
+    sub rcx, rsi                    ; rcx = align((src + 31), 32) - src
+    sub r9, rcx                     ; r9 = src + n - align((src + 31), 32)
 .loop:
-	vmovdqa xmm0, [rsi + rcx]       ; xmm0 = rsi[rcx]
-	vmovdqa [rdi + rcx], xmm0       ; rdi[rcx] = xmm0
+	vmovdqa ymm0, [rsi + rcx]       ; xmm0 = rsi[rcx]
+	vmovdqu [rdi + rcx], ymm0       ; rdi[rcx] = xmm0
     add rcx, 32                     ; rcx += 16
     sub r9, 32                      ; r9 -= 16
     cmp r9, 32                      ; if(r9 >= 16)
