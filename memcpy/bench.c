@@ -32,6 +32,16 @@ B63_BENCHMARK(movsq, n) {
     memcpy_movsq(dst, src, bigfile_size);
 }
 
+B63_BENCHMARK(movb, n) {
+  for (int i = 0; i < n; i++)
+    memcpy_movb(dst, src, bigfile_size);
+}
+
+B63_BENCHMARK(movq, n) {
+  for (int i = 0; i < n; i++)
+    memcpy_movsq(dst, src, bigfile_size);
+}
+
 B63_BENCHMARK(avx, n) {
   for (int i = 0; i < n; i++)
     memcpy_avx(dst, src, bigfile_size);
