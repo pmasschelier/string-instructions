@@ -138,24 +138,23 @@ memcpy_movq:
 ; void *memcpy_avx(rdi: const void dst[.n], rsi: void src[.n], rdx: size_t n)
 memcpy_avx:
     xor ecx, ecx                    ; rcx = 0
-    mov r9, rdx                     ; r9 = n
-    cmp r9, 16                      ; if(n < 16)
+    cmp rdx, 16                      ; if(n < 16)
     jb .end                         ;    goto .end
     vmovdqu xmm0, [rsi]             ; Copy the first
     vmovdqu [rdi], xmm0             ; 32 bytes
     lea rcx, [rsi + 15]             ; rcx = src + 15
     and rcx, -16                    ; rcx = align((src + 15), 16)
     sub rcx, rsi                    ; rcx = align((src + 15), 16) - src
-    sub r9, rcx                     ; r9 = src + n - align((src + 15), 16)
+    sub rdx, rcx                     ; rdx = src + n - align((src + 15), 16)
 .loop:
 	vmovdqa xmm0, [rsi + rcx]       ; xmm0 = rsi[rcx]
 	vmovdqu [rdi + rcx], xmm0       ; rdi[rcx] = xmm0
     add rcx, 16                     ; rcx += 16
-    sub r9, 16                      ; r9 -= 16
-    cmp r9, 16                      ; if(r9 >= 16)
+    sub rdx, 16                      ; rdx -= 16
+    cmp rdx, 16                      ; if(rdx >= 16)
 	jae .loop                       ;    goto .loop
 .end:
-    copy_qword r9, rcx
+    copy_qword rdx, rcx
     mov rax, rdi
 	ret
 
