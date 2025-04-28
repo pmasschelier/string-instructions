@@ -191,4 +191,5 @@ memcpy_avx2:
 .end:
     copy_dqword r9, rcx
     mov rax, rdi
+    vzeroupper
 	ret

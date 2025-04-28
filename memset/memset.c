@@ -1,10 +1,7 @@
-#include <string.h>
-
-#define BUF_LEN 1024
-
-unsigned char dest[BUF_LEN];
-
-int main(void) {
-  memset(dest, 0xAF, BUF_LEN);
-  return 0;
+void *__attribute__((optimize("O1"))) memset_dummy(void *dst, unsigned int c,
+                                                   unsigned long n) {
+  void *const ret = dst;
+  for (int i = 0; i < n; i++)
+    *((char *)dst++) = (char)c;
+  return ret;
 }
