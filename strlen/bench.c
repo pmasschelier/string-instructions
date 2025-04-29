@@ -18,9 +18,9 @@ B63_BENCHMARK(scasb, n) {
     strlen_scasb(bigfile);
 }
 
-B63_BENCHMARK(vec64, n) {
+B63_BENCHMARK(movq, n) {
   for (int i = 0; i < n; i++)
-    strlen_vec64(bigfile);
+    strlen_movq(bigfile);
 }
 
 B63_BENCHMARK(avx, n) {

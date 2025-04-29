@@ -3,8 +3,9 @@
 
 #include <stddef.h>
 
+size_t strlen_dummy(const char *s);
 size_t strlen_scasb(const char *s);
-size_t strlen_vec64(const char *s);
+size_t strlen_movq(const char *s);
 size_t strlen_avx(const char *s);
 size_t strlen_avx2(const char *s);
 size_t strlen_sse2(const char *s);
