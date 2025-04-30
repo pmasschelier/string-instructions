@@ -16,33 +16,45 @@ B63_BASELINE(standard, n) {
 }
 
 B63_BENCHMARK(dummy, n) {
+  int ret = 0;
   for (int i = 0; i < n; i++)
-    memcmp_dummy(dst, src, bigfile_size);
+    ret += memcmp_dummy(dst, src, bigfile_size);
+  B63_KEEP(ret);
 }
 
 B63_BENCHMARK(cmpsb, n) {
+  int ret = 0;
   for (int i = 0; i < n; i++)
-    memcmp_cmpsb(dst, src, bigfile_size);
+    ret += memcmp_cmpsb(dst, src, bigfile_size);
+  B63_KEEP(ret);
 }
 
 B63_BENCHMARK(cmpsq, n) {
+  int ret = 0;
   for (int i = 0; i < n; i++)
-    memcmp_cmpsq(dst, src, bigfile_size);
+    ret += memcmp_cmpsq(dst, src, bigfile_size);
+  B63_KEEP(ret);
 }
 
 B63_BENCHMARK(avx, n) {
+  int ret = 0;
   for (int i = 0; i < n; i++)
-    memcmp_avx(dst, src, bigfile_size);
+    ret += memcmp_avx(dst, src, bigfile_size);
+  B63_KEEP(ret);
 }
 
 B63_BENCHMARK(avx2, n) {
+  int ret = 0;
   for (int i = 0; i < n; i++)
-    memcmp_avx2(dst, src, bigfile_size);
+    ret += memcmp_avx2(dst, src, bigfile_size);
+  B63_KEEP(ret);
 }
 
 B63_BENCHMARK(vpcmpestri, n) {
+  int ret = 0;
   for (int i = 0; i < n; i++)
     memcmp_vpcmpestri(dst, src, bigfile_size);
+  B63_KEEP(ret);
 }
 
 int main(int argc, char *argv[]) {

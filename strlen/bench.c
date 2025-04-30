@@ -13,29 +13,46 @@ B63_BASELINE(standard, n) {
   B63_KEEP(ret);
 }
 
-B63_BENCHMARK(scasb, n) {
+B63_BENCHMARK(dummy, n) {
+  int ret = 0;
   for (int i = 0; i < n; i++)
-    strlen_scasb(bigfile);
+    ret += strlen_dummy(bigfile);
+  B63_KEEP(ret);
+}
+
+B63_BENCHMARK(scasb, n) {
+  int ret = 0;
+  for (int i = 0; i < n; i++)
+    ret += strlen_scasb(bigfile);
+  B63_KEEP(ret);
 }
 
 B63_BENCHMARK(movq, n) {
+  int ret = 0;
   for (int i = 0; i < n; i++)
-    strlen_movq(bigfile);
+    ret += strlen_movq(bigfile);
+  B63_KEEP(ret);
 }
 
 B63_BENCHMARK(avx, n) {
+  int ret = 0;
   for (int i = 0; i < n; i++)
-    strlen_avx(bigfile);
+    ret += strlen_avx(bigfile);
+  B63_KEEP(ret);
 }
 
 B63_BENCHMARK(avx2, n) {
+  int ret = 0;
   for (int i = 0; i < n; i++)
-    strlen_avx2(bigfile);
+    ret += strlen_avx2(bigfile);
+  B63_KEEP(ret);
 }
 
 B63_BENCHMARK(sse2, n) {
+  int ret = 0;
   for (int i = 0; i < n; i++)
-    strlen_sse2(bigfile);
+    ret += strlen_sse2(bigfile);
+  B63_KEEP(ret);
 }
 
 int main(int argc, char *argv[]) {
