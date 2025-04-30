@@ -44,39 +44,41 @@ memcmp_cmpsq:
 ; int memcmp_avx(rdi: const void s1[.n], rsi: const void s2[.n], rdx: size_t n);
 memcmp_avx:
 	xor eax, eax					; rax = 0
-
 	test rdx, rdx					; if(n == 0)
 	jz .exit						;	 return 0
-	mov rcx, rdx					; rcx = n
-	shr rcx, 4						; rcx = n / 16
-	and rdx, (0x10 - 1)				; rdx = n % 16
-
-.loop:
-	vmovdqa xmm2, [rdi]				; xmm2 = *(rsi)
-	vmovdqa xmm3, [rsi]				; xmm3 = *(rdi)
+	vmovdqu xmm2, [rdi]				; xmm2 = *(rsi)
+	vmovdqu xmm3, [rsi]				; xmm3 = *(rdi)
 	vpcmpeqb xmm0, xmm2, xmm3		; xmm0 = byte_mask(i => xmm2[i] == xmm3[i])
 	vpmovmskb r8d, xmm0				; Create a mask from the most significant bit of each byte
-	add rdi, 0x10					; rdi += 16
-	add rsi, 0x10					; rsi += 16
 	cmp r8d, 0xFFFF					; if(xmm2 != xmm3)
 	jne .end						; 	 goto .end
-	sub rcx, 1						; rcx -= 1
-	jnz .loop						; if(rcx != 0) goto .loop
-.end:
-	cmovne edx, eax					; If a difference was found reset edx
-	vmovdqu xmm2, [rdi + rdx - 0x10]; Read the last (unaligned) double quadword of s1
-	vmovdqu xmm3, [rsi + rdx - 0x10]; Read the last (unaligned) double quadword of s2
-
+    lea rcx, [rdi + 15]
+    and rcx, -16                    ; rcx = align((src + 15), 16)
+    sub rcx, rdi                    ; rcx = align((src + 15), 16) - src
+    sub rdx, rcx                     ; rdx = src + n - align((src + 15), 16)
+.loop:
+	vmovdqa xmm2, [rdi + rcx]		; xmm2 = rdi[rcx]
+	vmovdqu xmm3, [rsi + rcx]		; xmm3 = rsi[rcx]
 	vpcmpeqb xmm0, xmm2, xmm3		; xmm0 = byte_mask(i => xmm2[i] == xmm3[i])
-    vpmovmskb r8d, xmm0  	    	; Create a mask from the most significant bit of each byte
+	vpmovmskb r8d, xmm0				; Create a mask from the most significant bit of each byte
+    add rcx, 0x10
+	cmp r8d, 0xFFFF					; if(xmm2 != xmm3)
+	jne .end						; 	 goto .end
+    cmp rdx, 0x10
+	jb .end						; if(rcx != 0) goto .loop
+    sub rdx, 0x10
+    jmp .loop
+.end:
 	vpcmpgtb xmm1, xmm2, xmm3		; xmm1 = byte_mask(i => xmm2[i] > xmm3[i])
 	vpmovmskb r9d, xmm1				; Create a mask from the most significant bit of each byte
 	not r8w							; r8w = bitmask(i => xmm2[i] != xmm3[i])
 	test r8w, r8w
 	jz .exit
 	bsf ecx, r8d					; ecx = index of first differing bytes in xmm1/2
-	shr r9d, cl						; Find the corresponding bit in r9d	
+    cmp ecx, edx
+    jae .exit
 
+	shr r9d, cl						; Find the corresponding bit in r9d	
 	xor edx, edx
 	test r9d, 0x1					; If it is set
 	setnz al						;	 return 1
@@ -87,45 +89,47 @@ memcmp_avx:
 
 ; int memcmp_avx2(rdi: const void s1[.n], rsi: const void s2[.n], rdx: size_t n);
 memcmp_avx2:
-	xor eax, eax					; rax = 0
-
-	test rdx, rdx					; if(n == 0)
-	jz .exit						;	 return 0
-	mov rcx, rdx					; rcx = n
-	shr rcx, 5						; rcx = n / 32
-	and rdx, (0x20 - 1)				; rdx = n % 32
-
+	xor eax, eax				; rax = 0
+	test rdx, rdx				; if(n == 0)
+	jz .exit					;	 return 0
+	vmovdqu ymm2, [rdi]			; ymm2 = *(rsi)
+	vmovdqu ymm3, [rsi]			; ymm3 = *(rdi)
+	vpcmpeqb ymm0, ymm2, ymm3	; ymm0 = byte_mask(i => ymm2[i] == ymm3[i])
+	vpmovmskb r8d, ymm0			; Create a mask from the most significant bit of each byte
+	cmp r8d, 0xFFFFFFFF			; if(ymm2 != ymm3)
+	jne .end					; 	 goto .end
+    lea rcx, [rdi + 31]
+    and rcx, -32                ; rcx = align((src + 15), 16)
+    sub rcx, rdi                ; rcx = align((src + 15), 16) - src
+    sub rdx, rcx                ; rdx = src + n - align((src + 15), 16)
 .loop:
-	vmovdqa ymm2, [rdi]				; ymm2 = *(rsi)
-	vmovdqa ymm3, [rsi]				; ymm3 = *(rdi)
-	vpcmpeqb ymm0, ymm2, ymm3		; ymm0 = byte_mask(i => ymm2[i] == ymm3[i])
-	vpmovmskb r8d, ymm0				; Create a mask from the most significant bit of each byte
-	add rdi, 0x20					; rdi += 32
-	add rsi, 0x20					; rsi += 32
-	cmp r8d, 0xFFFFFFFF				; if(ymm2 != ymm3)
-	jne .end						; 	 goto .end
-	sub rcx, 1						; rcx -= 1
-	jnz .loop						; if(rcx != 0) goto .loop
+	vmovdqa ymm2, [rdi + rcx]	; ymm2 = rdi[rcx]
+	vmovdqu ymm3, [rsi + rcx]	; ymm3 = rsi[rcx]
+	vpcmpeqb ymm0, ymm2, ymm3	; ymm0 = byte_mask(i => ymm2[i] == ymm3[i])
+	vpmovmskb r8d, ymm0			; Create a mask from the most significant bit of each byte
+    add rcx, 0x20               ; rcx += 32
+	cmp r8d, 0xFFFFFFFF			; if(ymm2 != ymm3)
+	jne .end					; 	 goto .end
+    cmp rdx, 0x20               ; if(rcx < 32)
+	jb .end						;    goto .end
+    sub rdx, 0x20               ; rdx -= 32
+    jmp .loop
 .end:
-	cmovne edx, eax					; If a difference was found reset edx
-	vmovdqu ymm2, [rdi + rdx - 0x20]; Read the last (unaligned) double quadword of s1
-	vmovdqu ymm3, [rsi + rdx - 0x20]; Read the last (unaligned) double quadword of s2
-
-	vpcmpeqb ymm0, ymm2, ymm3		; ymm0 = byte_mask(i => ymm2[i] == ymm3[i])
-    vpmovmskb r8d, ymm0  	    	; Create a mask from the most significant bit of each byte
-	vpcmpgtb ymm1, ymm2, ymm3		; ymm1 = byte_mask(i => ymm2[i] > ymm3[i])
-	vpmovmskb r9d, ymm1				; Create a mask from the most significant bit of each byte
-	not r8d							; r8w = bitmask(i => xmm2[i] != xmm3[i])
+	vpcmpgtb ymm1, ymm2, ymm3	; ymm1 = byte_mask(i => ymm2[i] > ymm3[i])
+	vpmovmskb r9d, ymm1			; Create a mask from the most significant bit of each byte
+	not r8d						; r8w = bitmask(i => ymm2[i] != ymm3[i])
 	test r8d, r8d
 	jz .exit
-	bsf ecx, r8d					; ecx = index of first differing bytes in xmm1/2
-	shr r9d, cl						; Find the corresponding bit in r9d	
+	bsf ecx, r8d				; ecx = index of first differing bytes in xmm1/2
+    cmp ecx, edx
+    jae .exit
+	shr r9d, cl					; Find the corresponding bit in r9d	
 
 	xor edx, edx
-	test r9d, 0x1					; If it is set
-	setnz al						;	 return 1
-	setz dl							; else
-	sub eax, edx					;	 return -1
+	test r9d, 0x1				; If it is set
+	setnz al					;	 return 1
+	setz dl						; else
+	sub eax, edx				;	 return -1
 .exit:
 	vzeroupper
 	ret
@@ -149,14 +153,27 @@ BYTEWISE_CMP equ (PACKED_UBYTE | CMP_STR_EQU_EACH | CMP_STR_INV_VALID_ONLY | CMP
 
 ; int memcmp_vpcmpestri(rdi: const void s1[.n], rsi: const void s2[.n], rdx: size_t n);
 memcmp_vpcmpestri:
+    xor r10d, r10d
 	xor r8d, r8d				; r8 = 0
 	xor r9d, r9d				; r9 = 0
 	mov rax, rdx				; rax = n
 	test rdx, rdx				; if(n == 0)
 	jz .exit					;	 return 0
+	vmovdqu xmm2, [rdi]			; xmm2 = *rdi
+	vmovdqu xmm3, [rsi]			; xmm3 = *rsi
+
+	; Compare xmm2 and xmm3 for equality and write the index of the differing byte in ecx
+	; If all byte are the same rcx = 16
+	vpcmpestri xmm2, xmm3, BYTEWISE_CMP 
+	test cx, 0x10				; if(rcx != 16)
+	jz .end						; 	break
+    lea r10, [rdi + 15]
+    and r10, -16
+    sub r10, rdi
+    sub rdx, r10
 .loop:
-	vmovdqa xmm2, [rdi]			; xmm2 = *rdi
-	vmovdqa xmm3, [rsi]			; xmm3 = *rsi
+	vmovdqa xmm2, [rdi + r10]			; xmm2 = *rdi
+	vmovdqa xmm3, [rsi + r10]			; xmm3 = *rsi
 
 	; Compare xmm2 and xmm3 for equality and write the index of the differing byte in ecx
 	; If all byte are the same rcx = 16
@@ -164,8 +181,7 @@ memcmp_vpcmpestri:
 	test cx, 0x10				; if(rcx != 16)
 	jz .end						; 	break
 
-	add rdi, 0x10				; rdi++
-	add rsi, 0x10				; rsi++
+	add r10, 0x10				; r10 += 10
 
 	sub rdx, 0x10				; rdx -= 16
 	ja .loop					; if(rdx > 0) goto .loop
@@ -174,8 +190,9 @@ memcmp_vpcmpestri:
 .end:
 	xor eax, eax				; rax = 0
 	xor edx, edx				; rdx = 0
-	mov r8b, [rdi + rcx]		; r8b = rdi[rcx]
-	mov r9b, [rsi + rcx]		; r9b = rsi[rcx]
+    add r10, rcx
+	mov r8b, [rdi + r10]		; r8b = rdi[rcx]
+	mov r9b, [rsi + r10]		; r9b = rsi[rcx]
 	cmp r8b, r9b				; if(r8b > r9b)
 	seta al						; 	return 1
 	setb dl						; else

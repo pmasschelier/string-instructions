@@ -15,6 +15,11 @@ B63_BASELINE(standard, n) {
   B63_KEEP(ret);
 }
 
+B63_BENCHMARK(dummy, n) {
+  for (int i = 0; i < n; i++)
+    memcmp_dummy(dst, src, bigfile_size);
+}
+
 B63_BENCHMARK(cmpsb, n) {
   for (int i = 0; i < n; i++)
     memcmp_cmpsb(dst, src, bigfile_size);
