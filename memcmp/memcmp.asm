@@ -19,26 +19,42 @@ memcmp_cmpsb:
 
 ; int memcmp_cmpsq(rdi: const void s1[.n], rsi: const void s2[.n], rdx: size_t n);
 memcmp_cmpsq:
-	push rbx
-	mov rcx, rdx				; rcx = n
-	and rdx, (8 - 1)			; rdx = n % 8
+	xor eax, eax				; rax = 0
+    mov rcx, rdx    			; rcx = n
 	shr rcx, 3					; rcx = n / 8
-	xor eax, eax				; Set return value to zero
-	xor ebx, ebx        		; rbx = 0
+    cmpsq                       ; Compare first quadword (increments rsi and rdi)
+    jne .end                    ; If quadwords differ jump to .end
+    mov rax, rsi                ; rax = s2
+    and rax, -8                 ; rax = align(s2, 8)
+    sub rax, rsi                ; rax = - (s2 - align(s2, 8))
+    add rdx, 8                  ; rdx = n - 8
+    sub rdx, rax                ; rdx = n - 8 + (s2 - align(s2, 8))
+    add rsi, rax                ; rsi = s2 - (s2 - align(s2, 8))
+    add rdi, rax                ; rdi = s1 - (s2 - align(s2, 8))
+	xor eax, eax				; rax = 0
 	repe cmpsq					; for(; rcx != 0 and ZF == true; rcx += 8)
 								;	cmp *(rsi++), *(rdi++)
-	cmovne edx, ebx				; If a difference was found reset rdx
-	mov r8, [rdi + rdx - 0x8]	; Read the last (unaligned) quadword of s1
-	mov r9, [rsi + rdx - 0x8]	; Read the last (unaligned) quadword of s2
+    je .exit
+.end:
+	mov r8, [rdi - 0x8]	        ; Read the last quadword of s1
+	mov r9, [rsi - 0x8]	        ; Read the last quadword of s2
+    test rcx, rcx               ; if(rcx == 0)
+    jnz .cmp                    ;    goto .cmp
+    and rdx, (8 - 1)            ; rdx = (n - 8 + (s2 - align(s2, 8))) % 8
+    mov rcx, 8                  ; rcx = 8
+    sub rcx, rdx                ; rcx -= rdx
+    shl rcx, 3                  ; rcx *= 8
+    shl r8, cl                  ; r8 <<= cl
+    shl r9, cl                  ; r9 <<= cl
+.cmp:
+    xor ecx, ecx                ; rcx = 0
 	bswap r8					; Convert r8 to big-endian for lexical comparison
 	bswap r9					; Convert r9 to big-endian for lexical comparison
-
 	cmp r8, r9					; Lexical comparison of quadwords
 	seta al						; if (r8 > r9) al = 1
-	setb bl						; if (r8 < r9) dl = 1
-	sub eax, ebx				; return eax - edx
+	setb cl						; if (r8 < r9) cl = 1
+	sub eax, ecx				; return eax - ecx
 .exit:
-	pop rbx
 	ret
 
 ; int memcmp_avx(rdi: const void s1[.n], rsi: const void s2[.n], rdx: size_t n);
@@ -163,6 +179,7 @@ memcmp_vpcmpestri:
 	vmovdqu xmm3, [rsi]			; xmm3 = *rsi
 
 	; Compare xmm2 and xmm3 for equality and write the index of the differing byte in ecx
+    ; rax contains the length of the xmm2 string, rdx contains the length of the xmm3 string
 	; If all byte are the same rcx = 16
 	vpcmpestri xmm2, xmm3, BYTEWISE_CMP 
 	test cx, 0x10				; if(rcx != 16)
@@ -176,6 +193,7 @@ memcmp_vpcmpestri:
 	vmovdqa xmm3, [rsi + r10]			; xmm3 = *rsi
 
 	; Compare xmm2 and xmm3 for equality and write the index of the differing byte in ecx
+    ; rax contains the length of the xmm2 string, rdx contains the length of the xmm3 string
 	; If all byte are the same rcx = 16
 	vpcmpestri xmm2, xmm3, BYTEWISE_CMP 
 	test cx, 0x10				; if(rcx != 16)
@@ -189,6 +207,8 @@ memcmp_vpcmpestri:
 	ret							; return
 .end:
 	xor eax, eax				; rax = 0
+    cmp rcx, rdx
+    jae .exit
 	xor edx, edx				; rdx = 0
     add r10, rcx
 	mov r8b, [rdi + r10]		; r8b = rdi[rcx]
