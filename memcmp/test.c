@@ -22,6 +22,10 @@ const char src5[STRLEN5] =
     "is a longer string but with l is lower than n so it will stop earlier";
 const char src6[STRLEN6] = "Hhis";
 
+extern char src[];
+extern char dst[];
+extern unsigned int bigfile_size;
+
 void test_memcmp(int fn(const void *s1, const void *s2, size_t n),
                  const char *name) {
   int ret;
@@ -40,14 +44,19 @@ void test_memcmp(int fn(const void *s1, const void *s2, size_t n),
   cmp_ok(ret, ">", 0, "%s function (partial long)", name);
   ret = fn(src1 + 1, src6 + 1, STRLEN6 - 1);
   cmp_ok(ret, "==", 0, "%s function (short)", name);
+  ret = fn(src1 + 1, src6 + 1, STRLEN6 - 1);
+  cmp_ok(ret, "==", 0, "%s function (short)", name);
+  ret = fn(src, dst, bigfile_size);
+  cmp_ok(ret, ">", 0, "%s function (bigfile)", name);
 }
 
 int main(int argc, char *argv[]) {
-  plan(49);
+  plan(72);
 
   test_memcmp(memcmp, "Standard memcmp");
   test_memcmp(memcmp_dummy, "memcmp_dummy");
   test_memcmp(memcmp_cmpsb, "memcmp_cmpsb");
+  test_memcmp(memcmp_cmpsq_unaligned, "memcmp_cmpsq_unaligned");
   test_memcmp(memcmp_cmpsq, "memcmp_cmpsq");
   test_memcmp(memcmp_avx, "memcmp_avx");
   test_memcmp(memcmp_avx2, "memcmp_avx2");

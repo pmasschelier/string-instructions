@@ -1,4 +1,5 @@
 global memcmp_cmpsb
+global memcmp_cmpsq_unaligned
 global memcmp_cmpsq
 global memcmp_avx
 global memcmp_avx2
@@ -15,6 +16,33 @@ memcmp_cmpsb:
 	setb al			; if(ZF == false and CF == true) al = 1
 	seta dl			; if(ZF == false and CF == false) bl = 1
 	sub eax, edx	; return al - dl
+	ret
+
+; int memcmp_cmpsq_unaligned(rdi: const void s1[.n], rsi: const void s2[.n], rdx: size_t n);
+memcmp_cmpsq_unaligned:
+	lea rcx, [rdx + 0x7]	; rcx = n
+	and rdx, (8 - 1)		; rdx = n % 8
+	shr rcx, 3				; rcx = n / 8
+	xor eax, eax			; rax = 0
+	repe cmpsq				; for(; rcx != 0 and ZF == true; rcx += 8)
+							;	cmp *(rsi++), *(rdi++)
+    je .exit                ; If no difference was found return
+	mov r8, [rdi - 0x8]	    ; Read the last (unaligned) quadword of s1
+	mov r9, [rsi - 0x8]	    ; Read the last (unaligned) quadword of s2
+    test rcx, rcx           ; if(rcx != 0)
+    jnz .cmp                ;    goto .cmp
+    shl rdx, 3              ; rdx = 8 * (8 - n % 8)
+    jz .cmp                 ; if(rdx == 0) goto .cmp
+    bzhi r8, r8, rdx        ; r8 <<= 8 * (8 - n % 8)
+    bzhi r9, r9, rdx        ; r9 <<= 8 * (8 - n % 8)
+.cmp:
+	bswap r8				; Convert r8 to big-endian for lexical comparison
+	bswap r9				; Convert r9 to big-endian for lexical comparison
+	cmp r8, r9				; Lexical comparison of quadwords
+	seta al					; if (r8 > r9) al = 1
+	setb cl					; if (r8 < r9) cl = 1
+	sub eax, ecx			; return eax - ecx
+.exit:
 	ret
 
 ; int memcmp_cmpsq(rdi: const void s1[.n], rsi: const void s2[.n], rdx: size_t n);
@@ -38,7 +66,7 @@ memcmp_cmpsq:
 .end:
 	mov r8, [rdi - 0x8]	        ; Read the last quadword of s1
 	mov r9, [rsi - 0x8]	        ; Read the last quadword of s2
-    test rcx, rcx               ; if(rcx == 0)
+    test rcx, rcx               ; if(rcx != 0)
     jnz .cmp                    ;    goto .cmp
     and rdx, (8 - 1)            ; rdx = (n - 8 + (s2 - align(s2, 8))) % 8
     mov rcx, 8                  ; rcx = 8
@@ -184,13 +212,13 @@ memcmp_vpcmpestri:
 	vpcmpestri xmm2, xmm3, BYTEWISE_CMP 
 	test cx, 0x10				; if(rcx != 16)
 	jz .end						; 	break
-    lea r10, [rdi + 15]
-    and r10, -16
-    sub r10, rdi
-    sub rdx, r10
+    lea r10, [rdi + 15]         ; r10 = s1 + 15
+    and r10, -16                ; r10 = align(s1 + 15, 16)
+    sub r10, rdi                ; rdi = s1 - align(s1 + 15, 16)
+    sub rdx, r10                ; rdx = n - (s1 - align(s1 + 15, 16))
 .loop:
-	vmovdqa xmm2, [rdi + r10]			; xmm2 = *rdi
-	vmovdqa xmm3, [rsi + r10]			; xmm3 = *rsi
+	vmovdqa xmm2, [rdi + r10]			; xmm2 = rdi[r10]
+	vmovdqu xmm3, [rsi + r10]			; xmm3 = rsi[r10]
 
 	; Compare xmm2 and xmm3 for equality and write the index of the differing byte in ecx
     ; rax contains the length of the xmm2 string, rdx contains the length of the xmm3 string
@@ -207,8 +235,8 @@ memcmp_vpcmpestri:
 	ret							; return
 .end:
 	xor eax, eax				; rax = 0
-    cmp rcx, rdx
-    jae .exit
+    cmp rcx, rdx                ; if(index >= rdx)
+    jae .exit                   ;    return;
 	xor edx, edx				; rdx = 0
     add r10, rcx
 	mov r8b, [rdi + r10]		; r8b = rdi[rcx]

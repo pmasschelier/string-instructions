@@ -5,6 +5,7 @@
 
 int memcmp_dummy(const void *s1, const void *s2, size_t n);
 int memcmp_cmpsb(const void *s1, const void *s2, size_t n);
+int memcmp_cmpsq_unaligned(const void *s1, const void *s2, size_t n);
 int memcmp_cmpsq(const void *s1, const void *s2, size_t n);
 int memcmp_avx(const void *s1, const void *s2, size_t n);
 int memcmp_avx2(const void *s1, const void *s2, size_t n);

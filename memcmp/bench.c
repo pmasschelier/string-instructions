@@ -36,6 +36,13 @@ B63_BENCHMARK(cmpsq, n) {
   B63_KEEP(ret);
 }
 
+B63_BENCHMARK(cmpsq_unaligned, n) {
+  int ret = 0;
+  for (int i = 0; i < n; i++)
+    ret += memcmp_cmpsq_unaligned(dst, src, bigfile_size);
+  B63_KEEP(ret);
+}
+
 B63_BENCHMARK(avx, n) {
   int ret = 0;
   for (int i = 0; i < n; i++)

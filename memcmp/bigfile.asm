@@ -7,6 +7,7 @@ BYTESIZE equ (1 << 23)
 
 section .rodata
 align 64
+    db 0x0
 src:
 	times (BYTESIZE - 2) db 'A'
 	db 0xA
