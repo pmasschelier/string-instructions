@@ -16,50 +16,6 @@ memset_stosb:
 	mov rax, rsi	; return s
 	ret
 
-%macro set_quad 0
-	and esi, 0xFF			; Mask the first byte of esi
-	mov rax, [memset_one_mask]	; Load the multiplication mask
-    xchg rcx, rdx           ; rcx = n
-	mul rsi 				; Replicate al in all rax register (rdx is erased)
-    xchg rdx, rcx           ; rdx = n
-%endmacro
-
-memset_one_mask: dq 0x0101010101010101
-
-; void *memset_stosq(rdi: void s[.n], rsi: int c, rdx: size_t n);
-memset_stosq:
-    set_quad
-    mov rsi, rdi            ; rsi = s
-    cmp rdx, 8              ; if(n < 8)
-    jb .end                 ;    goto .end
-    mov rcx, rdi            ; rcx = s
-    add rdx, rdi            ; rdx = dst + n
-    stosq                   ; *(rdi++) = rax
-    and rdi, -8             ; rdi = align(dst + 8, 8)
-    sub rdx, rdi            ; rdx = dst + n - align(dst + 8, 8)
-    mov rcx, rdx            ; rcx = dst + n - align(dst + 8, 8)
-    and rdx, (8 - 1)        ; rdx = (dst + n - align(dst + 8, 8)) % 8
-    shr rcx, 3              ; rcx = (dst + n - align(dst + 8, 8)) / 8
-	rep stosq				; for(; rcx != 0; rcx -= 1)
-							;	 *(rdi++) = rax
-.end:
-    cmp rdx, 4              ; if(rdx < 4)
-    jb .word                ;    goto .word
-    stosd                   ; Store double word
-    sub rdx, 4              ; rdx -= 4
-.word:
-    cmp rdx, 2              ; if(rdx < 2)
-    jb .byte                ;    goto .byte
-    stosw                   ; Store word
-    sub rdx, 2              ; rdx -= 2
-.byte:
-    test rdx, rdx           ; if(rdx == 0)
-    jz .exit                ;    goto .exit
-    stosb                   ; Store byte
-.exit:
-    mov rax, rsi            ; Return s
-	ret
-
 ; void *memset_movb(rdi: void s[.n], rsi: int c, rdx: size_t n);
 memset_movb:
     test rdx, rdx           ; if(rdx == 0)
@@ -73,6 +29,14 @@ memset_movb:
 .exit:
     mov rax, rdi            ; return s
     ret
+
+%macro setup_memset_rax 0
+	and esi, 0xFF			; Mask the first byte of esi
+	mov rax, [memset_one_mask]	; Load the multiplication mask
+    xchg rcx, rdx           ; rcx = n
+	mul rsi 				; Replicate al in all rax register (rdx is erased)
+    xchg rdx, rcx           ; rdx = n
+%endmacro
 
 %macro set_dword 2
     cmp %1, 4
@@ -93,11 +57,36 @@ memset_movb:
 %%exit:
 %endmacro
 
+memset_one_mask: dq 0x0101010101010101
+
+; void *memset_stosq(rdi: void s[.n], rsi: int c, rdx: size_t n);
+memset_stosq:
+    setup_memset_rax
+    mov rsi, rdi            ; rsi = s
+    cmp rdx, 8              ; if(n < 8)
+    jb .end                 ;    goto .end
+    mov rcx, rdi            ; rcx = s
+    add rdx, rdi            ; rdx = dst + n
+    stosq                   ; *(rdi++) = rax
+    and rdi, -8             ; rdi = align(dst + 8, 8)
+    sub rdx, rdi            ; rdx = dst + n - align(dst + 8, 8)
+    mov rcx, rdx            ; rcx = dst + n - align(dst + 8, 8)
+    and rdx, (8 - 1)        ; rdx = (dst + n - align(dst + 8, 8)) % 8
+    shr rcx, 3              ; rcx = (dst + n - align(dst + 8, 8)) / 8
+	rep stosq				; for(; rcx != 0; rcx -= 1)
+							;	 *(rdi++) = rax
+.end:
+    xor ecx, ecx
+    set_dword rdx, rcx
+.exit:
+    mov rax, rsi            ; Return s
+	ret
+
 ; void *memset_movq(rdi: void s[.n], rsi: int c, rdx: size_t n);
 memset_movq:
     cmp rdx, 8
     jb .end
-    set_quad
+    setup_memset_rax
     xor ecx, ecx
 .loop:
     mov [rdi + rcx], rax

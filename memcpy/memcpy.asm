@@ -90,20 +90,6 @@ memcpy_movsq:
     pop rax
     ret
 
-    cmp rdx, 4                  ; if(rdx < 4)
-    jb .word                    ;    goto .word
-    movsd                       ; copy a double word
-    sub rdx, 4                  ; rdx -= 4
-.word
-    cmp rdx, 2                  ; if(rdx < 2)
-    jb .byte                    ;    goto .byte
-    movsw                       ; copy a word
-    sub rdx, 2                  ; rdx -= 2
-.byte:
-    test rdx, rdx               ; if(rdx == 0)
-    jz .exit                    ;    goto .exit
-    movsb                       ; copy a byte
-
 ; void *memcpy_movq(rdi: const void dst[.n], rsi: void src[.n], rdx: size_t n)
 memcpy_movq:
     xor ecx, ecx                ; rcx = 0
