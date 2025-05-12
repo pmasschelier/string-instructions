@@ -31,11 +31,11 @@ memset_movb:
     ret
 
 %macro setup_memset_rax 0
-	and esi, 0xFF			; Mask the first byte of esi
-	mov rax, [memset_one_mask]	; Load the multiplication mask
-    xchg rcx, rdx           ; rcx = n
-	mul rsi 				; Replicate al in all rax register (rdx is erased)
-    xchg rdx, rcx           ; rdx = n
+	and esi, 0xFF			    ; Mask the first byte of esi
+	mov rax, 0x0101010101010101	; Load the multiplication mask
+    xchg rcx, rdx               ; rcx = n
+	mul rsi 				    ; Replicate al in all rax register (rdx is erased)
+    xchg rdx, rcx               ; rdx = n
 %endmacro
 
 %macro set_dword 2
@@ -56,8 +56,6 @@ memset_movb:
     mov [rdi + %2], al
 %%exit:
 %endmacro
-
-memset_one_mask: dq 0x0101010101010101
 
 ; void *memset_stosq(rdi: void s[.n], rsi: int c, rdx: size_t n);
 memset_stosq:
