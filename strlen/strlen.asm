@@ -53,9 +53,6 @@ strlen_movq:
 	shr rcx, 3			    ; divide by 8 = byte index
 	add rax, rcx		    ; rax += rcx
 	ret
-.one_vec: dq 0x0101010101010101
-.mask: dq 0x8080808080808080 		
-
 
 ; size_t strlen_avx(rdi: const char *s)
 strlen_avx:
