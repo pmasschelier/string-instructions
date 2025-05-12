@@ -29,40 +29,6 @@ memcpy_movsb_std:
 	cld             ; Clear direction flag
 	ret             ; return rax
 
-; void *memcpy_movsq(rdi: const void dst[.n], rsi: void src[.n], rdx: size_t n)
-memcpy_movsq:
-    mov rax, rdi                ; rax = dst
-    cmp rdx, 8                  ; if(n < 8)
-    jb .end                     ;    goto .end
-    lea rcx, [rsi + 8]          ; rcx = src + 8
-    movsq                       ; Copy first quadword
-    and rsi, -8                 ; rsi = align(src + 8, 8)
-    sub rcx, rsi                ; rcx = (src + 8) - align(src + 8, 8)
-    sub rdi, rcx                ; rdi = (dst + 8) - ((src + 8) - align(src + 8, 8))
-    lea rdx, [rdx + rcx - 8]    ; rdx = n - (8 - ((src + 8) - align(src + 8, 8)))
-    mov rcx, rdx                ; rcx = n - (align(src + 8, 8) - src)
-    and rcx, -8                 ; rcx = align(n - (align(src + 8, 8) - src), 8)
-    shr rcx, 3                  ; rcx = align(n - (align(src + 8, 8) - src), 8) / 8
-	rep movsq                   ; for(; rcx != 0; rcx--)
-                                ;    *(rdi++) = *(rsi++)
-    and rdx, (8 - 1)            ; rdx = n - (align(src + 8, 8) - src) % 8
-.end:
-    cmp rdx, 4                  ; if(rdx < 4)
-    jb .word                    ;    goto .word
-    movsd                       ; copy a double word
-    sub rdx, 4                  ; rdx -= 4
-.word
-    cmp rdx, 2                  ; if(rdx < 2)
-    jb .byte                    ;    goto .byte
-    movsw                       ; copy a word
-    sub rdx, 2                  ; rdx -= 2
-.byte:
-    test rdx, rdx               ; if(rdx == 0)
-    jz .exit                    ;    goto .exit
-    movsb                       ; copy a byte
-.exit:
-    ret
-
 ; void *memcpy_movb(rdi: const void dst[.n], rsi: void src[.n], rdx: size_t n)
 memcpy_movb:
     mov rax, rdi                ; Save dst in rax
@@ -99,6 +65,44 @@ memcpy_movb:
     mov [rdi + %2], al          ; dst[%2] = al
 %%exit:
 %endmacro
+
+; void *memcpy_movsq(rdi: const void dst[.n], rsi: void src[.n], rdx: size_t n)
+memcpy_movsq:
+    push rdi                ; rax = dst
+    cmp rdx, 8                  ; if(n < 8)
+    jb .end                     ;    goto .end
+    lea rcx, [rsi + 8]          ; rcx = src + 8
+    movsq                       ; Copy first quadword
+    and rsi, -8                 ; rsi = align(src + 8, 8)
+    sub rcx, rsi                ; rcx = (src + 8) - align(src + 8, 8)
+    sub rdi, rcx                ; rdi = (dst + 8) - ((src + 8) - align(src + 8, 8))
+    lea rdx, [rdx + rcx - 8]    ; rdx = n - (8 - ((src + 8) - align(src + 8, 8)))
+    mov rcx, rdx                ; rcx = n - (align(src + 8, 8) - src)
+    and rcx, -8                 ; rcx = align(n - (align(src + 8, 8) - src), 8)
+    shr rcx, 3                  ; rcx = align(n - (align(src + 8, 8) - src), 8) / 8
+	rep movsq                   ; for(; rcx != 0; rcx--)
+                                ;    *(rdi++) = *(rsi++)
+    and rdx, (8 - 1)            ; rdx = n - (align(src + 8, 8) - src) % 8
+.end:
+    xor ecx, ecx
+    copy_dword rdx, rcx
+.exit:
+    pop rax
+    ret
+
+    cmp rdx, 4                  ; if(rdx < 4)
+    jb .word                    ;    goto .word
+    movsd                       ; copy a double word
+    sub rdx, 4                  ; rdx -= 4
+.word
+    cmp rdx, 2                  ; if(rdx < 2)
+    jb .byte                    ;    goto .byte
+    movsw                       ; copy a word
+    sub rdx, 2                  ; rdx -= 2
+.byte:
+    test rdx, rdx               ; if(rdx == 0)
+    jz .exit                    ;    goto .exit
+    movsb                       ; copy a byte
 
 ; void *memcpy_movq(rdi: const void dst[.n], rsi: void src[.n], rdx: size_t n)
 memcpy_movq:
