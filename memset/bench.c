@@ -27,6 +27,13 @@ B63_BENCHMARK(stosb, n) {
   B63_KEEP(ret);
 }
 
+B63_BENCHMARK(stosb_std, n) {
+  void *ret;
+  for (int i = 0; i < n; i++)
+    ret = memset_stosb_std(bigfile, 0xAF, bigfile_size);
+  B63_KEEP(ret);
+}
+
 B63_BENCHMARK(stosq, n) {
   void *ret;
   for (int i = 0; i < n; i++)

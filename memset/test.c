@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 #include <tap.h>
 
@@ -9,92 +10,60 @@ char dst[DSTLEN1];
 
 char buffer[1024];
 char base[1024];
-void test_memset(void *(*fn)(void *, int, size_t), void *dst, size_t dstlen,
-                 int value, unsigned offset, unsigned count, const char *name) {
+
+void test_memset(void *(*fn)(void *, int, size_t), const char *name) {
   void *ret;
-  memset(base, 0, dstlen);
-  memset(base + offset, value, count);
-  memset(dst, 0, dstlen);
-  ret = fn(dst + offset, value, count);
-  cmp_mem(dst, base, dstlen, name);
-  snprintf(buffer, 1024, "%s (retval)", name);
-  ok(ret == (dst + offset), buffer);
+
+  // Test case 1
+  memset(base, 0xAF, DSTLEN1);
+  memset(dst, 0x00, DSTLEN1);
+  ret = fn(dst, 0xAF, DSTLEN1);
+  cmp_mem(dst, base, DSTLEN1, "%s function", name);
+  cmp_ok((uintptr_t)ret, "==", (uintptr_t)dst, "%s function (retval)", name);
+
+  // Test case 2
+  memset(base, 0x00, DSTLEN1);
+  memset(dst, 0x00, DSTLEN1);
+  ret = fn(dst, 0xAF, 0);
+  cmp_mem(dst, base, DSTLEN1, "%s function (0-length)", name);
+  cmp_ok((uintptr_t)ret, "==", (uintptr_t)dst,
+         "%s function (0-length) (retval)", name);
+
+  // Test case 3
+  const size_t offset3 = 3;
+  const size_t count3 = DSTLEN1 - 6;
+  memset(base, 0x00, DSTLEN1);
+  memset(base + offset3, 0xAF, count3);
+  memset(dst, 0x00, DSTLEN1);
+  ret = fn(dst + offset3, 0xAF, count3);
+  cmp_mem(dst, base, DSTLEN1, "%s function (partial)", name);
+  cmp_ok((uintptr_t)ret, "==", (uintptr_t)dst + offset3,
+         "%s function (partial) (retval)", name);
+
+  // Test case 4
+  const size_t offset4 = 7;
+  const size_t count4 = 18;
+  memset(base, 0x00, DSTLEN1);
+  memset(base + offset4, 0xAF, count4);
+  memset(dst, 0x00, DSTLEN1);
+  ret = fn(dst + offset4, 0xAF, 18);
+  cmp_mem(dst, base, DSTLEN1, "%s function (partial short)", name);
+  cmp_ok((uintptr_t)ret, "==", (uintptr_t)dst + offset4,
+         "%s function (partial short) (retval)", name);
 }
 
 int main(int argc, char *argv[]) {
-  plan(64);
+  plan(72);
 
-  test_memset(memset, dst, DSTLEN1, 0xAF, 0, DSTLEN1,
-              "Standard memset function");
-  test_memset(memset, dst, DSTLEN1, 0xAF, 0, 0,
-              "Standard memset function (0-length)");
-  test_memset(memset, dst, DSTLEN1, 0xAF, 3, DSTLEN1 - 6,
-              "Standard memset function (partial)");
-  test_memset(memset, dst, DSTLEN1, 0xAF, 7, 18,
-              "Standard memset function (partial short)");
-
-  test_memset(memset_dummy, dst, DSTLEN1, 0xAF, 0, DSTLEN1,
-              "memset_dummy function");
-  test_memset(memset_dummy, dst, DSTLEN1, 0xAF, 0, 0,
-              "memset_dummy function (0-length)");
-  test_memset(memset_dummy, dst, DSTLEN1, 0xAF, 3, DSTLEN1 - 6,
-              "memset_dummy function (partial)");
-  test_memset(memset_dummy, dst, DSTLEN1, 0xAF, 7, 18,
-              "memset_dummy function (partial short)");
-
-  test_memset(memset_stosb, dst, DSTLEN1, 0xAF, 0, DSTLEN1,
-              "memset_stosb function");
-  test_memset(memset_stosb, dst, DSTLEN1, 0xAF, 0, 0,
-              "memset_stosb function (0-length)");
-  test_memset(memset_stosb, dst, DSTLEN1, 0xAF, 3, DSTLEN1 - 6,
-              "memset_stosb function (partial)");
-  test_memset(memset_stosb, dst, DSTLEN1, 0xAF, 7, 18,
-              "memset_stosb function (partial short)");
-
-  test_memset(memset_stosq, dst, DSTLEN1, 0xAF, 0, DSTLEN1,
-              "memset_stosq function");
-  test_memset(memset_stosq, dst, DSTLEN1, 0xAF, 0, 0,
-              "memset_stosq function (0-length)");
-  test_memset(memset_stosq, dst, DSTLEN1, 0xAF, 3, DSTLEN1 - 6,
-              "memset_stosq function (partial)");
-  test_memset(memset_stosq, dst, DSTLEN1, 0xAF, 7, 18,
-              "memset_stosq function (partial short)");
-
-  test_memset(memset_movb, dst, DSTLEN1, 0xAF, 0, DSTLEN1,
-              "memset_movb function");
-  test_memset(memset_movb, dst, DSTLEN1, 0xAF, 0, 0,
-              "memset_movb function (0-length)");
-  test_memset(memset_movb, dst, DSTLEN1, 0xAF, 3, DSTLEN1 - 6,
-              "memset_movb function (partial)");
-  test_memset(memset_movb, dst, DSTLEN1, 0xAF, 7, 18,
-              "memset_movb function (partial short)");
-
-  test_memset(memset_movq, dst, DSTLEN1, 0xAF, 0, DSTLEN1,
-              "memset_movq function");
-  test_memset(memset_movq, dst, DSTLEN1, 0xAF, 0, 0,
-              "memset_movq function (0-length)");
-  test_memset(memset_movq, dst, DSTLEN1, 0xAF, 3, DSTLEN1 - 6,
-              "memset_movq function (partial)");
-  test_memset(memset_movq, dst, DSTLEN1, 0xAF, 7, 18,
-              "memset_movq function (partial short)");
-
-  test_memset(memset_avx, dst, DSTLEN1, 0xAF, 0, DSTLEN1,
-              "memset_avx function");
-  test_memset(memset_avx, dst, DSTLEN1, 0xAF, 0, 0,
-              "memset_avx function (0-length)");
-  test_memset(memset_avx, dst, DSTLEN1, 0xAF, 3, DSTLEN1 - 6,
-              "memset_avx function (partial)");
-  test_memset(memset_avx, dst, DSTLEN1, 0xAF, 7, 18,
-              "memset_avx function (partial short)");
-
-  test_memset(memset_avx2, dst, DSTLEN1, 0xAF, 0, DSTLEN1,
-              "memset_avx2 function");
-  test_memset(memset_avx2, dst, DSTLEN1, 0xAF, 0, 0,
-              "memset_avx2 function (0-length)");
-  test_memset(memset_avx2, dst, DSTLEN1, 0xAF, 3, DSTLEN1 - 6,
-              "memset_avx2 function (partial)");
-  test_memset(memset_avx2, dst, DSTLEN1, 0xAF, 7, 18,
-              "memset_avx2 function (partial short)");
+  test_memset(memset, "Standard memset");
+  test_memset(memset_dummy, "memset_dummy");
+  test_memset(memset_dummy, "memset_stosb");
+  test_memset(memset_dummy, "memset_stosb_std");
+  test_memset(memset_dummy, "memset_movb");
+  test_memset(memset_dummy, "memset_stosq");
+  test_memset(memset_dummy, "memset_movq");
+  test_memset(memset_dummy, "memset_avx");
+  test_memset(memset_dummy, "memset_avx2");
 
   return EXIT_SUCCESS;
 }

@@ -1,4 +1,5 @@
 global memset_stosb
+global memset_stosb_std
 global memset_stosq
 global memset_movb
 global memset_movq
@@ -14,6 +15,20 @@ memset_stosb:
 	rep stosb		; for(; rcx != 0; rcx--)
 					;	 *(rdi++) = al
 	mov rax, rsi	; return s
+	ret
+
+; void *memset_stosb_std(rdi: void s[.n], rsi: int c, rdx: size_t n);
+memset_stosb_std:
+    std             ; Set direction flag
+	movzx eax, sil	; eax = c
+	mov rsi, rdi	; rsi = s
+	mov rcx, rdx	; rcx = n
+    sub rdx, 1      ; rdx = n - 1
+    add rdi, rdx    ; rdi = s + (n - 1)
+	rep stosb		; for(; rcx != 0; rcx--)
+					;	 *(rdi--) = al
+	mov rax, rsi	; return s
+    cld             ;
 	ret
 
 ; void *memset_movb(rdi: void s[.n], rsi: int c, rdx: size_t n);
@@ -139,7 +154,7 @@ memset_avx:
 	jae .loop						;	 goto .loop
 .end:
     memset_epilog_avx rdx, rcx
-.exit
+.exit:
 	mov rax, rdi					; rax = s
 	ret
 
