@@ -31,14 +31,18 @@ memset_movb:
     ret
 
 %macro setup_memset_rax 0
-	and esi, 0xFF			    ; Mask the first byte of esi
-	mov rax, 0x0101010101010101	; Load the multiplication mask
-    xchg rcx, rdx               ; rcx = n
-	mul rsi 				    ; Replicate al in all rax register (rdx is erased)
-    xchg rdx, rcx               ; rdx = n
+    mov rcx, rdx                ; rcx = n
+	movzx eax, sil			    ; Mask the first byte of esi
+	mov rdx, 0x0101010101010101	; Load the multiplication mask
+	mul rdx 				    ; Replicate al in all rax register (rdx is erased)
+    mov rdx, rcx                ; rdx = n
 %endmacro
 
-%macro set_dword 2
+; Macro used to set less than a quadword
+; The macro take two parameters:
+; - A register containing the byte count to copy
+; - A register containing the current 8-byte aligned offset
+%macro memset_epilog_qword 2
     cmp %1, 4
     jb %%word
     mov [rdi + %2], eax
@@ -75,7 +79,7 @@ memset_stosq:
 							;	 *(rdi++) = rax
 .end:
     xor ecx, ecx
-    set_dword rdx, rcx
+    memset_epilog_qword rdx, rcx
 .exit:
     mov rax, rsi            ; Return s
 	ret
@@ -93,11 +97,15 @@ memset_movq:
     cmp rdx, 8
     jae .loop
 .end:
-    set_dword rdx, rcx
+    memset_epilog_qword rdx, rcx
     mov rax, rdi
     ret
 
-%macro set_qword 2
+; Macro used to set less than a 16 bytes
+; The macro take two parameters:
+; - A register containing the byte count to copy
+; - A register containing the current 16-byte aligned offset
+%macro memset_epilog_avx 2
     vmovq rax, xmm0
     cmp %1, 8
     jb %%dword
@@ -105,7 +113,7 @@ memset_movq:
     add %2, 8
     sub %1, 8
 %%dword:
-    set_dword %1, %2
+    memset_epilog_qword %1, %2
 %endmacro
 
 ; void *memset_avx(rdi: void s[.n], rsi: int c, rdx: size_t n);
@@ -130,19 +138,23 @@ memset_avx:
     cmp rdx, 16                     ; if(rdx >= 16)
 	jae .loop						;	 goto .loop
 .end:
-    set_qword rdx, rcx
+    memset_epilog_avx rdx, rcx
 .exit
 	mov rax, rdi					; rax = s
 	ret
 
-%macro set_dqword 2
+; Macro used to set less than a 32 bytes
+; The macro take two parameters:
+; - A register containing the byte count to copy
+; - A register containing the current 32-byte aligned offset
+%macro memset_epilog_avx2 2
     cmp %1, 16
     jb %%qword
     vmovdqu [rdi + %2], xmm0
     add %2, 16
     sub %1, 16
 %%qword:
-    set_qword %1, %2
+    memset_epilog_avx %1, %2
 %endmacro
 
 ; void *memset_avx2(rdi: void s[.n], rsi: int c, rdx: size_t n);
@@ -167,7 +179,7 @@ memset_avx2:
     cmp rdx, 32                     ; if(rdx >= 32)
 	jae .loop						;	 goto .loop
 .end:
-    set_dqword rdx, rcx
+    memset_epilog_avx2 rdx, rcx
 	mov rax, rdi					; rax = s
 	vzeroupper
 	ret

@@ -44,7 +44,11 @@ memcpy_movb:
 .exit:
     ret
 
-%macro copy_dword 2
+; Macro used to copy less than a quadword
+; The macro take two parameters:
+; - A register containing the byte count to copy
+; - A register containing the current 8-byte aligned offset
+%macro memcpy_epilog_qword 2
     cmp %1, 4                   ; if(r8 < 4)
     jb %%word                    ;    goto .word
     mov eax, [rsi + %2]         ; eax = src[%2]
@@ -85,7 +89,7 @@ memcpy_movsq:
     and rdx, (8 - 1)            ; rdx = n - (align(src + 8, 8) - src) % 8
 .end:
     xor ecx, ecx
-    copy_dword rdx, rcx
+    memcpy_epilog_qword rdx, rcx
 .exit:
     pop rax
     ret
@@ -110,11 +114,15 @@ memcpy_movq:
     cmp r9, 8                   ; if(r9 >= 8)
     jae .loop                   ;    goto .loop
 .end:
-    copy_dword r9, rcx
+    memcpy_epilog_qword r9, rcx
     mov rax, rdi                ; return dst
     ret
 
-%macro copy_qword 2
+; Macro used to copy less than a 16 bytes
+; The macro take two parameters:
+; - A register containing the byte count to copy
+; - A register containing the current 16-byte aligned offset
+%macro memcpy_epilog_avx 2
     cmp %1, 8
     jb %%dword
     mov rax, [rsi + %2]
@@ -122,7 +130,7 @@ memcpy_movq:
     add %2, 8
     sub %1, 8
 %%dword:
-    copy_dword %1, %2
+    memcpy_epilog_qword %1, %2
 %endmacro
 
 ; void *memcpy_avx(rdi: const void dst[.n], rsi: void src[.n], rdx: size_t n)
@@ -144,11 +152,15 @@ memcpy_avx:
     cmp rdx, 16                      ; if(rdx >= 16)
 	jae .loop                       ;    goto .loop
 .end:
-    copy_qword rdx, rcx
+    memcpy_epilog_avx rdx, rcx
     mov rax, rdi
 	ret
 
-%macro copy_dqword 2
+; Macro used to copy less than a 32 bytes
+; The macro take two parameters:
+; - A register containing the byte count to copy
+; - A register containing the current 32-byte aligned offset
+%macro memcpy_epilog_avx2 2
     cmp %1, 16
     jb %%qword
     movdqa xmm0, [rsi + %2]
@@ -156,7 +168,7 @@ memcpy_avx:
     add %2, 16
     sub %1, 16
 %%qword:
-    copy_qword %1, %2
+    memcpy_epilog_avx %1, %2
 %endmacro
 
 ; void *memcpy_avx2(rdi: const void dst[.n], rsi: void src[.n], rdx: size_t n)
@@ -179,7 +191,7 @@ memcpy_avx2:
     cmp r9, 32                      ; if(r9 >= 16)
 	jae .loop                       ;    goto .loop
 .end:
-    copy_dqword r9, rcx
+    memcpy_epilog_avx2 r9, rcx
     mov rax, rdi
     vzeroupper
 	ret
