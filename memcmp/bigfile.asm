@@ -16,6 +16,7 @@ bigfile_size:
 	dd $ - src
 
 align 64
+    db 0x0
 dst:
 	times (BYTESIZE - 2) db 'A'
 	db 0x1

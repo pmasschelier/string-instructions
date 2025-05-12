@@ -3,6 +3,7 @@ global memcmp_cmpsq_unaligned
 global memcmp_cmpsq
 global memcmp_avx
 global memcmp_avx2
+global memcmp_vpcmpestri_unaligned
 global memcmp_vpcmpestri
 
 section .text
@@ -101,11 +102,11 @@ memcmp_avx:
     sub rcx, rdi                    ; rcx = align((src + 15), 16) - src
     sub rdx, rcx                     ; rdx = src + n - align((src + 15), 16)
 .loop:
+    vmovdqu xmm3, [rsi + rcx]		; xmm3 = rsi[rcx]
 	vmovdqa xmm2, [rdi + rcx]		; xmm2 = rdi[rcx]
-	vmovdqu xmm3, [rsi + rcx]		; xmm3 = rsi[rcx]
+    add rcx, 0x10
 	vpcmpeqb xmm0, xmm2, xmm3		; xmm0 = byte_mask(i => xmm2[i] == xmm3[i])
 	vpmovmskb r8d, xmm0				; Create a mask from the most significant bit of each byte
-    add rcx, 0x10
 	cmp r8d, 0xFFFF					; if(xmm2 != xmm3)
 	jne .end						; 	 goto .end
     cmp rdx, 0x10
@@ -147,11 +148,11 @@ memcmp_avx2:
     sub rcx, rdi                ; rcx = align((src + 15), 16) - src
     sub rdx, rcx                ; rdx = src + n - align((src + 15), 16)
 .loop:
+    vmovdqu ymm3, [rsi + rcx]	; ymm3 = rsi[rcx]
 	vmovdqa ymm2, [rdi + rcx]	; ymm2 = rdi[rcx]
-	vmovdqu ymm3, [rsi + rcx]	; ymm3 = rsi[rcx]
+    add rcx, 0x20               ; rcx += 32
 	vpcmpeqb ymm0, ymm2, ymm3	; ymm0 = byte_mask(i => ymm2[i] == ymm3[i])
 	vpmovmskb r8d, ymm0			; Create a mask from the most significant bit of each byte
-    add rcx, 0x20               ; rcx += 32
 	cmp r8d, 0xFFFFFFFF			; if(ymm2 != ymm3)
 	jne .end					; 	 goto .end
     cmp rdx, 0x20               ; if(rcx < 32)
@@ -195,11 +196,46 @@ CMP_STRM_BYTE_MASK	equ (0b01 << 6)
 
 BYTEWISE_CMP equ (PACKED_UBYTE | CMP_STR_EQU_EACH | CMP_STR_INV_VALID_ONLY | CMP_STRI_FIND_LSB_SET)
 
+; int memcmp_vpcmpestri_unaligned(rdi: const void s1[.n], rsi: const void s2[.n], rdx: size_t n);
+memcmp_vpcmpestri_unaligned:
+    xor r10d, r10d
+	mov rax, rdx				; rax = n
+	test rdx, rdx				; if(n == 0)
+	jz .exit					;	 return n
+	vmovdqu xmm2, [rdi + r10]	; xmm2 = rdi[r10]
+	vmovdqu xmm3, [rsi + r10]	; xmm3 = rsi[r10]
+.loop:
+	; Compare xmm2 and xmm3 for equality and write the index of the differing byte in ecx
+    ; rax contains the length of the xmm2 string, rdx contains the length of the xmm3 string
+	; If all byte are the same rcx = 16
+	vpcmpestri xmm2, xmm3, BYTEWISE_CMP 
+	test cx, 0x10				; if(rcx != 16)
+	jz .end						; 	break
+	add r10, 0x10				; r10 += 10
+	vmovdqu xmm2, [rdi + r10]	; xmm2 = rdi[r10]
+	vmovdqu xmm3, [rsi + r10]	; xmm3 = rsi[r10]
+	sub rdx, 0x10				; rdx -= 16
+	ja .loop					; if(rdx > 0) goto .loop
+	xor eax, eax				; rax = 0
+	ret							; return
+.end:
+	xor eax, eax				; rax = 0
+    cmp rcx, rdx                ; if(index >= rdx)
+    jae .exit                   ;    return;
+	xor edx, edx				; rdx = 0
+    add r10, rcx                ; r10 += index
+	mov r8b, [rdi + r10]		; r8b = rdi[r10]
+	mov r9b, [rsi + r10]		; r9b = rsi[r10]
+	cmp r8b, r9b				; if(r8b > r9b)
+	seta al						; 	return 1
+	setb dl						; else
+	sub eax, edx				; 	return -1
+.exit:
+	ret
+
 ; int memcmp_vpcmpestri(rdi: const void s1[.n], rsi: const void s2[.n], rdx: size_t n);
 memcmp_vpcmpestri:
     xor r10d, r10d
-	xor r8d, r8d				; r8 = 0
-	xor r9d, r9d				; r9 = 0
 	mov rax, rdx				; rax = n
 	test rdx, rdx				; if(n == 0)
 	jz .exit					;	 return 0
@@ -216,10 +252,9 @@ memcmp_vpcmpestri:
     and r10, -16                ; r10 = align(s1 + 15, 16)
     sub r10, rdi                ; rdi = s1 - align(s1 + 15, 16)
     sub rdx, r10                ; rdx = n - (s1 - align(s1 + 15, 16))
-.loop:
 	vmovdqa xmm2, [rdi + r10]			; xmm2 = rdi[r10]
 	vmovdqu xmm3, [rsi + r10]			; xmm3 = rsi[r10]
-
+.loop:
 	; Compare xmm2 and xmm3 for equality and write the index of the differing byte in ecx
     ; rax contains the length of the xmm2 string, rdx contains the length of the xmm3 string
 	; If all byte are the same rcx = 16
@@ -228,6 +263,9 @@ memcmp_vpcmpestri:
 	jz .end						; 	break
 
 	add r10, 0x10				; r10 += 10
+
+	vmovdqa xmm2, [rdi + r10]			; xmm2 = rdi[r10]
+	vmovdqu xmm3, [rsi + r10]			; xmm3 = rsi[r10]
 
 	sub rdx, 0x10				; rdx -= 16
 	ja .loop					; if(rdx > 0) goto .loop

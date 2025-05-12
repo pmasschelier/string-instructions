@@ -64,6 +64,13 @@ B63_BENCHMARK(vpcmpestri, n) {
   B63_KEEP(ret);
 }
 
+B63_BENCHMARK(vpcmpestri_unaligned, n) {
+  int ret = 0;
+  for (int i = 0; i < n; i++)
+    memcmp_vpcmpestri_unaligned(dst, src, bigfile_size);
+  B63_KEEP(ret);
+}
+
 int main(int argc, char *argv[]) {
   B63_RUN(argc, argv);
   return EXIT_SUCCESS;

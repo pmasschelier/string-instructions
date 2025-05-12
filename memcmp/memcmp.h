@@ -10,5 +10,6 @@ int memcmp_cmpsq(const void *s1, const void *s2, size_t n);
 int memcmp_avx(const void *s1, const void *s2, size_t n);
 int memcmp_avx2(const void *s1, const void *s2, size_t n);
 int memcmp_vpcmpestri(const void *s1, const void *s2, size_t n);
+int memcmp_vpcmpestri_unaligned(const void *s1, const void *s2, size_t n);
 
 #endif // !MEMCMP_ASM_H

@@ -51,7 +51,7 @@ void test_memcmp(int fn(const void *s1, const void *s2, size_t n),
 }
 
 int main(int argc, char *argv[]) {
-  plan(72);
+  plan(81);
 
   test_memcmp(memcmp, "Standard memcmp");
   test_memcmp(memcmp_dummy, "memcmp_dummy");
@@ -60,6 +60,7 @@ int main(int argc, char *argv[]) {
   test_memcmp(memcmp_cmpsq, "memcmp_cmpsq");
   test_memcmp(memcmp_avx, "memcmp_avx");
   test_memcmp(memcmp_avx2, "memcmp_avx2");
+  test_memcmp(memcmp_vpcmpestri_unaligned, "memcmp_vpcmpestri_unaligned");
   test_memcmp(memcmp_vpcmpestri, "memcmp_vpcmpestri");
 
   return EXIT_SUCCESS;
