@@ -1,4 +1,5 @@
 #include <b63/b63.h>
+#include <b63/counters/perf_events.h>
 #include <string.h>
 
 #include "memcpy.h"
