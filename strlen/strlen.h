@@ -5,6 +5,7 @@
 
 size_t strlen_dummy(const char *s);
 size_t strlen_scasb(const char *s);
+size_t strlen_movb(const char *s);
 size_t strlen_movq(const char *s);
 size_t strlen_avx(const char *s);
 size_t strlen_avx2(const char *s);

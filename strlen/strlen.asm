@@ -1,4 +1,5 @@
 global strlen_scasb
+global strlen_movb
 global strlen_movq
 global strlen_avx
 global strlen_avx2
@@ -18,6 +19,18 @@ strlen_scasb:
 					;                     = -(- (len(rdi) + 2)) - 1 - 1
 					;                     = len(rdi)
 	mov rax, rcx	; rax = len(rdi)
+	ret
+
+; size_t strlen_movb(rdi: const char *s)
+strlen_movb:
+	xor eax, eax	; rax = 0
+.loop:
+    movzx rdx, byte [rdi + rax]
+    test edx, edx
+    jz .end
+    add rax, 1
+    jmp .loop
+.end:
 	ret
 
 ; size_t strlen_movq(rdi: const char *s)

@@ -27,6 +27,13 @@ B63_BENCHMARK(scasb, n) {
   B63_KEEP(ret);
 }
 
+B63_BENCHMARK(movb, n) {
+  int ret = 0;
+  for (int i = 0; i < n; i++)
+    ret += strlen_movb(bigfile);
+  B63_KEEP(ret);
+}
+
 B63_BENCHMARK(movq, n) {
   int ret = 0;
   for (int i = 0; i < n; i++)
