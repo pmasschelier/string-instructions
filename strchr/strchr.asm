@@ -8,13 +8,7 @@ global strchr_sse2
 
 %include "find_zero.asm"
 
-%macro load_byte_movzx 0 
-	movzx eax, byte [rsi]
-	add rsi, 1
-%endmacro
-%macro load_byte_lodsb 0 
-	lodsb
-%endmacro
+section .text
 
 %macro strchr_byte 1
     xchg rdi, rsi
@@ -31,13 +25,18 @@ global strchr_sse2
     ret
 %endmacro
 
-%macro load_quad_mov 0 
-	mov rax, [rsi]
-	add rsi, 8
+; char* strchr_lodsb(rdi: const char* s, rsi: int c)
+strchr_lodsb:
+    strchr_byte lodsb
+
+%macro load_byte_movzx 0 
+	movzx eax, byte [rsi]
+	add rsi, 1
 %endmacro
-%macro load_quad_lodsq 0 
-	lodsq
-%endmacro
+
+; char* strchr_movb(rdi: const char* s, rsi: int c)
+strchr_movb:
+    strchr_byte load_byte_movzx
 
 %macro strchr_quad 1
 	movzx eax, sil			; eax = sil
@@ -70,23 +69,17 @@ global strchr_sse2
 %%notfound:
     xor eax, eax
     ret
-
 %%one_mask: dq 0x0101010101010101
 %endmacro
 
-section .text
-
-; char* strchr_lodsb(rdi: const char* s, rsi: int c)
-strchr_lodsb:
-    strchr_byte load_byte_lodsb
-
-; char* strchr_movb(rdi: const char* s, rsi: int c)
-strchr_movb:
-    strchr_byte load_byte_movzx
-
 ; char* strchr_lodsq(rdi: const char* s, rsi: int c)
 strchr_lodsq:
-    strchr_quad load_quad_lodsq
+    strchr_quad lodsq
+
+%macro load_quad_mov 0 
+	mov rax, [rsi]
+	add rsi, 8
+%endmacro
 
 ; char* strchr_movq(rdi: const char* s, rsi: int c)
 strchr_movq:
