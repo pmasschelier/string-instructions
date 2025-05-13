@@ -5,10 +5,26 @@ global iota_movq
 global iota_avx
 global iota_avx2
 
-%macro store_movb 0
-	mov [rdi], al
-	add rdi, 0x1
-%endmacro
+;     cmp rsi, 0x4
+;     jb %%word
+;     mov [rdi], eax
+;     add rdi, 0x4
+;     sub rsi, 0x4
+;     shr rax, 32
+; %%word:
+;     cmp rsi, 0x2
+;     jb %%byte
+;     mov [rdi], ax
+;     add rdi, 0x2
+;     sub rsi, 0x2
+;     shr rax, 16
+; %%byte:
+;     test rsi, rsi
+;     jz %%exit
+;     mov [rdi], al
+; %%exit:
+
+section .text
 
 %macro iota_byte 1
 	xor eax, eax
@@ -23,6 +39,19 @@ global iota_avx2
 %%exit:
 	ret
 %endmacro
+
+; void *iota_stosb(rdi: unsigned char s[.n], rsi: size_t n);
+iota_stosb:
+    iota_byte stosb
+
+%macro store_movb 0
+	mov [rdi], al
+	add rdi, 0x1
+%endmacro
+
+; void *iota_movb(rdi: unsigned char s[.n], rsi: size_t n);
+iota_movb:
+    iota_byte store_movb
 
 %macro store_movq 0
 	mov [rdi], rax
@@ -44,35 +73,8 @@ global iota_avx2
 	cmp rsi, 0x8
 	jae %%loop
 %%end:
-;     cmp rsi, 0x4
-;     jb %%word
-;     mov [rdi], eax
-;     add rdi, 0x4
-;     sub rsi, 0x4
-;     shr rax, 32
-; %%word:
-;     cmp rsi, 0x2
-;     jb %%byte
-;     mov [rdi], ax
-;     add rdi, 0x2
-;     sub rsi, 0x2
-;     shr rax, 16
-; %%byte:
-;     test rsi, rsi
-;     jz %%exit
-;     mov [rdi], al
-; %%exit:
     ret
 %endmacro
-
-section .text
-; void *iota_stosb(rdi: unsigned char s[.n], rsi: size_t n);
-iota_stosb:
-    iota_byte stosb
-
-; void *iota_movb(rdi: unsigned char s[.n], rsi: size_t n);
-iota_movb:
-    iota_byte store_movb
 
 ; void *iota_stosq(rdi: unsigned char s[.n], rsi: size_t n);
 iota_stosq:
