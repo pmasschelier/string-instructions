@@ -1,4 +1,5 @@
 global memcmp_cmpsb
+global memcmp_movb
 global memcmp_cmpsq_unaligned
 global memcmp_cmpsq
 global memcmp_avx
@@ -10,10 +11,29 @@ section .text
 ; int memcmp_cmpsb(rdi: const void s1[.n], rsi: const void s2[.n], rdx: size_t n);
 memcmp_cmpsb:
 	mov rcx, rdx	; rcx = n
-	xor rax, rax	; Set return value to zero
-	xor rdx, rdx
+	xor eax, eax	; Set return value to zero
+	xor edx, edx
 	repe cmpsb		; for(; rcx != 0 and ZF == true; rcx--)
 					;	cmp *(rsi++), *(rdi++)
+	setb al			; if(ZF == false and CF == true) al = 1
+	seta dl			; if(ZF == false and CF == false) bl = 1
+	sub eax, edx	; return al - dl
+	ret
+
+; int memcmp_movb(rdi: const void s1[.n], rsi: const void s2[.n], rdx: size_t n);
+memcmp_movb:
+	xor eax, eax	; rax = 0
+	xor ecx, ecx	; rcx = 0
+.loop:
+    movzx r8d, byte [rdi+rcx]
+    movzx r9d, byte [rsi+rcx]
+    add rcx, 1
+    cmp r8b, r9b
+    jne .end
+    sub rdx, 1
+    jnz .loop
+.end:
+	xor edx, edx
 	setb al			; if(ZF == false and CF == true) al = 1
 	seta dl			; if(ZF == false and CF == false) bl = 1
 	sub eax, edx	; return al - dl

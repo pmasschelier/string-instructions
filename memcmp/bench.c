@@ -29,6 +29,13 @@ B63_BENCHMARK(cmpsb, n) {
   B63_KEEP(ret);
 }
 
+B63_BENCHMARK(movb, n) {
+  int ret = 0;
+  for (int i = 0; i < n; i++)
+    ret += memcmp_movb(dst, src, bigfile_size);
+  B63_KEEP(ret);
+}
+
 B63_BENCHMARK(cmpsq, n) {
   int ret = 0;
   for (int i = 0; i < n; i++)

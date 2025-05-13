@@ -51,11 +51,12 @@ void test_memcmp(int fn(const void *s1, const void *s2, size_t n),
 }
 
 int main(int argc, char *argv[]) {
-  plan(81);
+  plan(90);
 
   test_memcmp(memcmp, "Standard memcmp");
   test_memcmp(memcmp_dummy, "memcmp_dummy");
   test_memcmp(memcmp_cmpsb, "memcmp_cmpsb");
+  test_memcmp(memcmp_cmpsb, "memcmp_movb");
   test_memcmp(memcmp_cmpsq_unaligned, "memcmp_cmpsq_unaligned");
   test_memcmp(memcmp_cmpsq, "memcmp_cmpsq");
   test_memcmp(memcmp_avx, "memcmp_avx");
